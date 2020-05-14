@@ -47,8 +47,6 @@ install --minimal \
   pulseaudio \
   unzip
 fi
-=======
-
 
 mkdir -p /etc/dconf/profile
 mkdir -p /etc/dconf/db/local.d
@@ -61,7 +59,6 @@ cat << EOF > /etc/dconf/db/local.d/01-always_show_logout
 always-show-log-out=true
 EOF
 dconf update
->>>>>>> 67dc8d77d44552b05ab6ad2fc7d699e2d4003064
 
 TIPS="$TIPS
 You can start GNOME via the startgnome host command: sudo startgnome

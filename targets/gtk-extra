@@ -14,13 +14,7 @@ else
     install_dummy network-manager network-manager-gnome
 fi
 install debian=gdebi, gksu
-=======
-install_dummy network-manager network-manager-gnome
-install gdebi
-if release -lt buster -lt kali-rolling -lt artful; then
-  install gksu
-fi
->>>>>>> 67dc8d77d44552b05ab6ad2fc7d699e2d4003064
+
 
 if [ "${DISTROAKA:-"$DISTRO"}" = 'gentoo' ]; then
     install dillo
