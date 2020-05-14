@@ -6,14 +6,15 @@
 set -e
 
 APPLICATION="${0##*/}"
-BINDIR="`dirname "\`readlink -f "$0"\`"`"
-CHROOTS="`readlink -m "$BINDIR/../chroots"`"
+BINDIR="`dirname "\`readlink -f -- "$0"\`"`"
+CHROOTS="`readlink -m -- "$BINDIR/../chroots"`"
 CREATE=''
 ENCRYPT=''
 KEYFILE=''
 PRINT=''
-ROOT="`readlink -m '/var/run/crouton'`"
+ROOT="`readlink -m -- '/var/run/crouton'`"
 MOUNTOPTS='rw,dev,exec,suid'
+METRICSDIR='/run/metrics/external/crouton'
 
 USAGE="$APPLICATION [options] name [...]
 
@@ -57,6 +58,27 @@ fi
 
 # Make sure we always exit with echo on the tty.
 addtrap "stty echo 2>/dev/null"
+
+# Whitelists a directory for symlink and other hardening
+whitelist() {
+    # As of 67, symlinks and fifos are blocked in stateful partitions.
+    # Add exceptions for this chroot.
+    local sec='/sys/kernel/security' mounted=''
+    if mountpoint -q "$sec"; then
+        mounted=y
+    elif ! mount -n -t securityfs -o nodev,noexec,nosuid securityfs "$sec"; then
+        return
+    fi
+    policies="$sec/chromiumos/inode_security_policies"
+    if [ -d "$policies" ]; then
+        for policy in "$policies/allow_"*; do
+            printf "$CHROOT" > "$policy"
+        done
+    fi
+    if [ -z "$mounted" ]; then
+        umount "$sec"
+    fi
+}
 
 # Function to prompt the user for a passphrase. Sets $passphrase.
 promptNewPassphrase() {
@@ -119,6 +141,14 @@ for NAME in "$@"; do
     chown root:root "$ROOT"
     chmod 700 "$ROOT"
 
+    # Extraordinarily vague usage stat; see https://crbug.com/989219
+    if [ -z "${CROUTON_DISABLE_STATS-}" -a -d "${METRICSDIR%/*}" ]; then
+        mkdir -p -m 0777 "$METRICSDIR"
+        chown root:root "$METRICSDIR"
+        chmod 777 "$METRICSDIR"
+        touch "$METRICSDIR/crouton-started"
+    fi || true
+
     if [ -n "$PRINT" ]; then
         echo "$CHROOT"
     fi
@@ -128,6 +158,8 @@ for NAME in "$@"; do
         if [ -z "$ENCRYPT" ]; then
             mount --bind "$CHROOTSRC" "$CHROOT"
             mount -i -o "remount,$MOUNTOPTS" "$CHROOT"
+            mount --make-private "$CHROOT"
+            whitelist "$CHROOT"
             continue
         fi
 
@@ -214,8 +246,10 @@ $passphrase" | ecryptfs-wrap-passphrase "$wrappedfnek" -
             addtrap "rm -f '$wrappedkey' '$wrappedfnek'"
 
             # Extract wrapped keys from keyfile
-            tail -c 160 "$KEYFILE" | head -c 80 > "$wrappedkey"
-            tail -c 80 "$KEYFILE" > "$wrappedfnek"
+            wrappedtotal="$(($(wc -c < "$KEYFILE") - $(head -n 1 "$KEYFILE" | wc -c)))"
+            wrappedsize="$((wrappedtotal / 2))"
+            tail -c "$wrappedtotal" "$KEYFILE" | head -c "$wrappedsize" > "$wrappedkey"
+            tail -c "$wrappedsize" "$KEYFILE" > "$wrappedfnek"
 
             # Change the passphrase if requested
             if [ "${ENCRYPT:-0}" -ge 2 ]; then
@@ -247,6 +281,11 @@ $passphrase" | ecryptfs-rewrap-passphrase "$wrappedfnek" -
             error 1 "Failed to decrypt $NAME."
         fi
 
+        # Create a new session, and link user keyring to that session,
+        # as required by ecryptfs.
+        keyctl new_session >/dev/null
+        keyctl link @u @s
+
         mnt="ecryptfs_sig=$keysig,ecryptfs_fnek_sig=$fneksig"
         mnt="$mnt,ecryptfs_cipher=aes,ecryptfs_key_bytes=16"
         mnt="$mnt,ecryptfs_unlink_sigs,$MOUNTOPTS"
@@ -254,6 +293,8 @@ $passphrase" | ecryptfs-rewrap-passphrase "$wrappedfnek" -
         if ! mount -i -t ecryptfs -o "$mnt" "$CHROOTSRC" "$CHROOT"; then
             error 1 "Failed to mount $NAME."
         fi
+
+        whitelist "$CHROOT"
     fi
 
     # Perform the move

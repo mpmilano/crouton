@@ -3,16 +3,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 REQUIRES='x11'
-DESCRIPTION='GTK-based tools including gdebi, gksu, and a simple browser.'
+DESCRIPTION='GTK-based tools including gdebi and a simple browser.'
 . "${TARGETSDIR:="$PWD"}/common"
 
 ### Append to prepare.sh:
+
 if [ "${DISTROAKA:-"$DISTRO"}" = 'gentoo' ]; then
     set_flags gtk gnome-keyring policykit
 else
     install_dummy network-manager network-manager-gnome
 fi
 install debian=gdebi, gksu
+=======
+install_dummy network-manager network-manager-gnome
+install gdebi
+if release -lt buster -lt kali-rolling -lt artful; then
+  install gksu
+fi
+>>>>>>> 67dc8d77d44552b05ab6ad2fc7d699e2d4003064
 
 if [ "${DISTROAKA:-"$DISTRO"}" = 'gentoo' ]; then
     install dillo

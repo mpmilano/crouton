@@ -191,7 +191,7 @@ fixkeyboardmode() {
 compile() {
     local out="/usr/local/bin/crouton$1"
     local linker="$2"
-    local cflags='-xc -Os'
+    local cflags='-xc -Os -I/usr/src/crouton'
     if [ "$3" = 'so' ]; then
         out="/usr/local/lib/crouton$1.so"
         cflags="$cflags -shared -fPIC"
@@ -230,7 +230,8 @@ convert_automake() {
         s/\([^ ]*\) *+= */\1=${\1}\ /
         s/ /\\ /g
         y/()/{}/
-        s/if\\ \(.*\)/if [ -n "${\1}" ]; then/
+        s/if\\ !\(.*\)/if [ -z "${\1}" ]; then/
+        s/if\\ \([^!].*\)/if [ -n "${\1}" ]; then/
         s/endif/fi/
     ' 'Makefile.am'
     echo '

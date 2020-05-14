@@ -139,12 +139,16 @@ done
 shift "$((OPTIND-1))"
 
 # Check against the minimum version of Chromium OS
-if ! awk -F= '/_RELEASE_BUILD_NUMBER=/ { exit int($2) < '"${CROS_MIN_VERS:-0}"' }' \
+if [ -n "$DOWNLOADONLY" ]; then
+    :
+elif ! grep -q '_RELEASE_BUILD_NUMBER=' /etc/lsb-release 2>/dev/null; then
+    error 2 "$APPLICATION can only be installed in the Chromium OS dev mode shell."
+elif ! awk -F= '/_RELEASE_BUILD_NUMBER=/ { exit int($2) < '"${CROS_MIN_VERS:-0}"' }' \
         '/etc/lsb-release' 2>/dev/null; then
     error 2 "Your version of Chromium OS is extraordinarily old.
 If there are updates pending, please reboot and try again.
 Otherwise, you may not be getting automatic updates, in which case you should
-post your update_engine.log from chrome://system to http://crbug.com/296768 and
+post your update_engine.log from chrome://system to http://crbug.com/new and
 restore your device using a recovery USB: https://goo.gl/AZ74hj"
 fi
 
@@ -349,7 +353,7 @@ fi
 
 # Check if we're running from a tty, which does not interact well with X11
 if [ -z "$DOWNLOADONLY" ] && \
-        readlink -f "/proc/$$/fd/0" | grep -q '^/dev/tty'; then
+        readlink -f -- "/proc/$$/fd/0" | grep -q '^/dev/tty'; then
     echo \
 "WARNING: It is highly recommended that you run $APPLICATION from a crosh shell
 (Ctrl+Alt+T in Chromium OS), not from a VT. If you continue to run this from a

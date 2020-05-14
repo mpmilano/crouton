@@ -145,8 +145,30 @@ void cras_sbc_codec_destroy(struct cras_audio_codec *codec) {
     abort();
 }
 END
+
+        # Find the cras test client
+        cras_test_client='tools/cras_test_client/cras_test_client.c'
+        # FIXME: remove when 12334.0.0 (R77) becomes minimum target
+        if [ ! -f "$cras_test_client" ]; then
+            cras_test_client='tests/cras_test_client.c'
+        fi
+
         # Drop SBC constants
-        sed -e 's/SBC_[A-Z0-9_]*/0/g' -i tests/cras_test_client.c
+        sed -e 's/SBC_[A-Z0-9_]*/0/g' -i "$cras_test_client"
+
+	# FIXME(crbug.com/864815) Remove when fixed upstream
+	if [ "$cras_arch" = "i386" ]; then
+	    sed -i -e 's/Dumping AEC info to %s, stream %lu/Dumping AEC info to %s, stream %llu/' \
+		"$cras_test_client"
+	fi
+	sed -i -e 's/cras_stream_id_t stream_id;/cras_stream_id_t stream_id = 0;/' \
+	    "$cras_test_client"
+
+	# FIXME(http://crrev.com/c/1759370): Remove when R78 becomes minimum target
+	sed -i -e 's/\(strncpy.*sizeof(info.name)\));/\1 - 1); info.name[sizeof(info.name) - 1] = '"'"'\\0'"'"';/' \
+		common/cras_shm.c
+	sed -i -e 's/^struct \([^_]\)/struct __attribute__((__packed__)) \1/' \
+		common/cras_messages.h
 
         # Directory to install CRAS library/binaries
         CRASLIBDIR="/usr/local$archextrapath/lib"
@@ -196,7 +218,15 @@ fi
 # Build CRAS for native architecture
 build_cras
 
-cat > /usr/share/alsa/alsa.conf.d/10-cras.conf <<EOF
+alsaconf='/etc/alsa/conf.d'
+if [ ! -d "$alsaconf" ]; then
+    alsaconf='/usr/share/alsa/alsa.conf.d'
+    if [ ! -d "$alsaconf" ]; then
+        echo "Unable to find correct ALSA configuration directory." >&2
+        alsaconf='/tmp'
+    fi
+fi
+cat > "$alsaconf/10-cras.conf" <<EOF
 pcm.cras {
     type cras
     hint {
