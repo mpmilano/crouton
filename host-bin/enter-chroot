@@ -223,7 +223,8 @@ if [ -z "$NOLOGIN" -a -f "$CHROOT$SETUPSCRIPT" ]; then
     fi
     if [ "${response#[Dd]}" != "$response" ]; then
         echo 'Removing the chroot setup script. You may want to update your chroot again.' 1>&2
-        rm -f "$CHROOT$SETUPSCRIPT"
+	echo "(we're not actually removing it.  you can find it at $CHROOT$SETUPSCRIPT)" 1>&2
+        #rm -f "$CHROOT$SETUPSCRIPT"
     elif [ -n "$response" ]; then
         echo 'Skipping setup. You will be prompted again next time.' 1>&2
     fi

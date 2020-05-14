@@ -205,6 +205,7 @@ compile() {
     addtrap "rm -f '$tmp'"
     gcc $cflags - $linker -o "$tmp"
     /usr/bin/install -sDT "$tmp" "$out"
+    echo 'compile complete'
 }
 
 

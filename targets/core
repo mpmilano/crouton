@@ -106,20 +106,21 @@ EOF
     apt-get -y dist-upgrade
 fi
 
+
+# Create the sudo group (if needed) and allow users in sudo to run all commands
+if ! grep -q ^sudo /etc/group; then
+    # Debian uses GID 28 for sudo. it overlaps with render, but i don't care, so I'll move render.
+    groupmod -g 29 render
+    groupadd -g 28 sudo
+    mkdir -p /etc/sudoers.d
+    echo "%sudo ALL=(ALL) ALL" > /etc/sudoers.d/crouton-group
+fi
+
+
 # Update the portage tree for Gentoo, if at least one day has passed
 if [ "${DISTROAKA:-"$DISTRO"}" = 'gentoo' ]; then
-    # Get the time of the last sync
-    LAST_SYNC="$(cut -f1 -d' ' /usr/portage/metadata/timestamp.x)"
-    # Add a day to it, in seconds
-    LAST_SYNC="$((LAST_SYNC + 86400))"
-    # Get the current epoch time in seconds
-    TIME_SEC="$(date +%s)"
-    # If at least a day has passed, do the sync
-    if [ "$TIME_SEC" -gt "$LAST_SYNC" ]; then
-        emerge --sync
-    fi
-
     # Make sure that the system is up to date
+    USE="-pam" emerge --oneshot libpcap sys-libs/pam
     emerge world -Duv --newuse
 fi
 
@@ -148,17 +149,11 @@ if [ "${DISTROAKA:-"$DISTRO"}" = 'gentoo' ]; then
     set_flags dbus python udev -bindist
 fi
 
-
 # Install critical packages
 install --minimal gentoo=app-admin/sudo,sudo wget ca-certificates \
     debian=apt-transport-https,
 
-# Create the sudo group (if needed) and allow users in sudo to run all commands
-if ! grep -q ^sudo /etc/group; then
-    # Debian uses GID 28 for sudo and it doesn't overlap with Gentoo, so use it
-    groupadd -g 28 sudo
-    echo "%sudo ALL=(ALL) ALL" > /etc/sudoers.d/crouton-group
-fi
+
 
 # Generate and set default locale
 #<<<<<<< HEAD
