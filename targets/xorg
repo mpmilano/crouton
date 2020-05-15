@@ -221,6 +221,7 @@ fi
 if [ -z "$inteldriver" -a -n "$backport" ] && release -eq precise; then
     # xorg is packaged wrong on ARM and conflicts with xserver-xorg-lts-quantal
     # so replace it with something not broken
+    echo "we're about to call install dummy"
     install_dummy xorg -- xserver-xorg$backport libgl1-mesa-glx$backport \
         libgl1-mesa-dri$backport libglu1-mesa xfonts-base x11-apps \
         x11-session-utils x11-utils x11-xfs-utils x11-xkb-utils \
@@ -233,8 +234,6 @@ elif [ "${DISTROAKA:-"$DISTRO"}" = 'gentoo' ]; then
         set_use_expand VIDEO_CARDS i915
         set_use_expand VIDEO_CARDS i965
 
-	# We'll also need the glamor use flag for intel
-	set_flags glamor
     fi
     if [ "${installvideodrivers#*"$fbdev"}" != "$fbdev" ]; then
         set_use_expand VIDEO_CARDS fbdev
@@ -253,6 +252,7 @@ fi
 if [ -n "$removevideodrivers" ]; then
     remove $removevideodrivers
 fi
+
 
 # If this is a system with framebuffer compression, we need SNA+tearfree
 xorgconf='/usr/share/X11/xorg.conf.d/20-crouton-intel-sna.conf'

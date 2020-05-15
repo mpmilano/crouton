@@ -126,7 +126,7 @@ install_dist() {
     done
     if [ -n "$pkgs" ]; then
         # No quotes here, we want the shell to do word splitting
-        emerge -Duv --newuse $pkgs
+        emerge -uNDv $pkgs
     fi
 }
 
@@ -141,7 +141,9 @@ install_pkg_dist() {
 # install_dummy_dist: see install_dummy() in prepare.sh for details.
 install_dummy_dist() {
     echo "ERROR: A target called install_dummy_dist() on Gentoo"
-    exit 3
+    echo "The args were: $*"
+    echo "we are just going to ignore it"
+
 }
 
 

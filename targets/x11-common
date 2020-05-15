@@ -9,6 +9,7 @@
 ### Append to prepare.sh:
 
 # Create dummy xserver-xorg-legacy
+
 install_dummy xserver-xorg-legacy
 
 # Store and apply the X11 method

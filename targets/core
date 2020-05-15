@@ -120,8 +120,11 @@ fi
 # Update the portage tree for Gentoo, if at least one day has passed
 if [ "${DISTROAKA:-"$DISTRO"}" = 'gentoo' ]; then
     # Make sure that the system is up to date
-    USE="-pam" emerge --oneshot libpcap sys-libs/pam
+    USE="-pam" emerge --oneshot --noreplace libpcap sys-libs/pam
     emerge world -Duv --newuse
+    if ! grep -q ACCEPT_LICENSE /etc/portage/make.conf 
+    then echo 'ACCEPT_LICENSE="*"' >> /etc/portage/make.conf
+    fi
 fi
 
 # On release upgrade, keyboard-configuration might be reconfigured.
