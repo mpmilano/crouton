@@ -34,9 +34,13 @@ mkdir -p "$DIR"
 
 # Download and unpack
 echo "Downloading release: $STAGE3..." 1>&2
-# Exclude /var/tmp because the buildhost might have left useless stuff in there
-  #curl "$FETCH_DIR/$STAGE3" \
-if ! cat /tmp/stage3-amd64* \
+      # Exclude /var/tmp because the buildhost might have left useless stuff in there
+if [ -f /tmp/stage3-amd64* ]; then
+    command_to_get_stage3='cat /tmp/stage3-amd64*'
+else
+    command_to_get_stage3="curl $FETCH_DIR/$STAGE3"
+fi
+if ! $command_to_get_stage3 \ 
     | tar --exclude="./tmp" --exclude="./var/tmp" -C "$DIR" --strip-components=1 -xJ; then
     error 1 'Failed to download stage3.'
 fi
@@ -53,8 +57,13 @@ PORTAGE="$MIRROR/snapshots/portage-latest.tar.bz2"
 mkdir -p "$DIR/var/db/repos/gentoo/"
 
 echo "Fetching the portage tree snapshot ($PORTAGE) ..." 1>&2
-#curl "$PORTAGE" \
-if ! cat /tmp/portage-latest.tar.bz2 \
+if [ -f /tmp/portage-latest.tar.bz2 ]; then
+    command_to_get_portage="cat /tmp/portage-latest.tar.bz2"
+else
+    command_to_get_portage="curl $PORTAGE"
+fi
+
+if ! $command_to_get_portage \
     | tar -C "$DIR/var/db/repos/gentoo/" --strip-components=1 -jx 2>/dev/null; then
     error 1 'Failed to fetch the portage tree.'
 fi
